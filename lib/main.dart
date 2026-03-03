@@ -259,7 +259,10 @@ final _scratchPattern = List<int>.generate(1600, (i) {
 });
 
 class _ScratchCardState extends State<ScratchCard>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final List<List<Offset>> _scratchPaths = [];
   List<Offset> _currentPath = [];
   Offset? _pointerPosition;
@@ -384,7 +387,7 @@ class _ScratchCardState extends State<ScratchCard>
 
   void _checkReveal() {
     final pct = _scratchedCells.length / (_gridSize * _gridSize);
-    if (pct > 0.4 && !_isRevealed) {
+    if (pct > 0.8 && !_isRevealed) {
       setState(() => _isRevealed = true);
       widget.audio.stop();
       _revealController.forward();
@@ -420,6 +423,7 @@ class _ScratchCardState extends State<ScratchCard>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

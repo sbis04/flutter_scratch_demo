@@ -7,6 +7,7 @@ extension type _JSAudio._(JSObject _) implements JSObject {
   external set loop(bool value);
   external set preload(String value);
   external set currentTime(num value);
+  external set volume(num value);
   external JSPromise play();
   external void pause();
 }
@@ -18,7 +19,8 @@ class WebAudioPlayer {
     _audio = _JSAudio()
       ..src = 'assets/$assetPath'
       ..loop = true
-      ..preload = 'auto';
+      ..preload = 'auto'
+      ..volume = 0.5;
   }
 
   void play() {
