@@ -46,6 +46,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
   int _currentPage = 0;
   bool _isScratchActive = false;
   int _resetGeneration = 0;
+  bool _isMuted = false;
 
   @override
   void initState() {
@@ -85,23 +86,36 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _buildStorySegments(),
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 24, top: 8),
-                child: TextButton(
-                  onPressed: () =>
-                      setState(() => _resetGeneration++),
-                  style: TextButton.styleFrom(
-                    foregroundColor:
-                        Colors.white.withValues(alpha: 0.5),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 1,
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: () => setState(() => _isMuted = !_isMuted),
+                    icon: Icon(
+                      _isMuted ? Icons.volume_off : Icons.volume_up,
+                    ),
+                    style: IconButton.styleFrom(
+                      foregroundColor:
+                          Colors.white.withValues(alpha: 0.5),
+                      fixedSize: const Size(40, 40),
                     ),
                   ),
-                  child: const Text('RESET ALL'),
-                ),
+                  TextButton(
+                    onPressed: () =>
+                        setState(() => _resetGeneration++),
+                    style: TextButton.styleFrom(
+                      foregroundColor:
+                          Colors.white.withValues(alpha: 0.5),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    child: const Text('RESET ALL'),
+                  ),
+                ],
               ),
             ),
             // Card area with arrows overlaid
@@ -110,9 +124,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                 children: [
                   PageView.builder(
                     controller: _pageController,
-                    physics: _isScratchActive
-                        ? const NeverScrollableScrollPhysics()
-                        : const BouncingScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: _cardColors.length,
                     onPageChanged: (i) => setState(() => _currentPage = i),
                     itemBuilder: (context, index) {
@@ -122,6 +134,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                           color: _cardColors[index],
                           haptics: _haptics,
                           audio: _scratchAudio,
+                          isMuted: _isMuted,
                           onScratchActiveChanged: (active) =>
                               setState(() => _isScratchActive = active),
                         ),
@@ -131,29 +144,23 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                   // Left arrow
                   Positioned(
                     left: 8,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: _buildNavArrow(
-                        Icons.chevron_left,
-                        _currentPage > 0
-                            ? () => _goToPage(_currentPage - 1)
-                            : null,
-                      ),
+                    bottom: 24,
+                    child: _buildNavArrow(
+                      Icons.chevron_left,
+                      _currentPage > 0
+                          ? () => _goToPage(_currentPage - 1)
+                          : null,
                     ),
                   ),
                   // Right arrow
                   Positioned(
                     right: 8,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: _buildNavArrow(
-                        Icons.chevron_right,
-                        _currentPage < _cardColors.length - 1
-                            ? () => _goToPage(_currentPage + 1)
-                            : null,
-                      ),
+                    bottom: 24,
+                    child: _buildNavArrow(
+                      Icons.chevron_right,
+                      _currentPage < _cardColors.length - 1
+                          ? () => _goToPage(_currentPage + 1)
+                          : null,
                     ),
                   ),
                 ],
@@ -227,12 +234,14 @@ class ScratchCard extends StatefulWidget {
     required this.color,
     required this.haptics,
     required this.audio,
+    required this.isMuted,
     required this.onScratchActiveChanged,
   });
 
   final Color color;
   final WebHaptics haptics;
   final WebAudioPlayer audio;
+  final bool isMuted;
   final ValueChanged<bool> onScratchActiveChanged;
 
   @override
@@ -297,7 +306,6 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    widget.audio.play();
     widget.haptics.trigger('light');
   }
 
@@ -306,12 +314,15 @@ class _ScratchCardState extends State<ScratchCard>
     final box = _cardBox;
     if (box == null) return;
     final local = box.globalToLocal(event.position);
+    // Only play sound when pointer is actually moving over unscratched area
+    final wasPlaying = _currentPath.length > 1;
     setState(() {
       _currentPath.add(local);
       _pointerPosition = local;
       _updateTilt(local);
       _markScratched(local);
     });
+    if (!wasPlaying && !widget.isMuted) widget.audio.play();
     if (_currentPath.length % 5 == 0) {
       widget.haptics.trigger('selection');
     }
