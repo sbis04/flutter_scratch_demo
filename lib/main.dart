@@ -1,3 +1,4 @@
+import 'dart:js_interop';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -5,6 +6,28 @@ import 'package:flutter/material.dart';
 import 'package:web_haptics/web_haptics.dart';
 
 import 'web_audio_player.dart';
+
+// Direct navigator.vibrate() — bypasses web_haptics for diagnostics.
+@JS('navigator.vibrate')
+external bool? _jsVibrate(JSAny pattern);
+
+bool _tryVibrate(int durationMs) {
+  try {
+    final result = _jsVibrate(durationMs.toJS);
+    return result == true;
+  } catch (_) {
+    return false;
+  }
+}
+
+bool _tryVibrateCancel() {
+  try {
+    _jsVibrate(0.toJS);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 const _appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
 
@@ -315,9 +338,10 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    // Use 'buzz' (1000ms, intensity 1) — a confirmed-working string
-    // preset — from pointer down which is a user-gesture context.
-    debugPrint('[haptic] pointer DOWN → buzz');
+    // Direct navigator.vibrate() call — bypasses web_haptics entirely.
+    final vibrateOk = _tryVibrate(200);
+    debugPrint('[haptic] pointer DOWN → direct vibrate(200) = $vibrateOk');
+    // Also fire via web_haptics for the iOS checkbox path.
     widget.haptics.trigger('buzz');
   }
 
@@ -334,8 +358,11 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     if (!wasPlaying && !widget.isMuted) widget.audio.play();
-    // Haptics: pattern already running from pointer down — no trigger
-    // here since pointermove lacks user-gesture context on iOS Safari.
+    // Try direct vibrate on every 3rd move for diagnostics.
+    if (_currentPath.length % 3 == 0) {
+      final ok = _tryVibrate(30);
+      debugPrint('[haptic] scratch MOVE #${_currentPath.length} → direct vibrate(30) = $ok');
+    }
   }
 
   void _onPointerUp(PointerUpEvent event) {
@@ -351,10 +378,8 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
-    debugPrint('[haptic] pointer UP — cancelling scratch haptic');
-    widget.haptics.cancel();
-    // Call synchronously — must stay inside the pointer-up user-gesture
-    // context, otherwise iOS drops the reveal haptics.
+    _tryVibrateCancel();
+    debugPrint('[haptic] pointer UP — vibrate cancelled');
     _checkReveal();
   }
 
@@ -387,12 +412,13 @@ class _ScratchCardState extends State<ScratchCard>
       setState(() => _isRevealed = true);
       widget.audio.stop();
       _revealController.forward();
-      // Celebratory reveal — ascending double-tap
-      debugPrint('[haptic] REVEAL → success (pct=${pct.toStringAsFixed(2)})');
+      // Celebratory reveal
+      final revealOk = _tryVibrate(100);
+      debugPrint('[haptic] REVEAL → direct vibrate(100) = $revealOk');
       widget.haptics.trigger('success');
-      // Follow up with a heavier thud after a beat
-      Future.delayed(const Duration(milliseconds: 200), () {
-        debugPrint('[haptic] REVEAL delayed → heavy');
+      Future.delayed(const Duration(milliseconds: 300), () {
+        final heavyOk = _tryVibrate(50);
+        debugPrint('[haptic] REVEAL delayed → direct vibrate(50) = $heavyOk');
         widget.haptics.trigger('heavy');
       });
     }
