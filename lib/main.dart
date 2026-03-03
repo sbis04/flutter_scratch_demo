@@ -248,11 +248,10 @@ class ScratchCard extends StatefulWidget {
   State<ScratchCard> createState() => _ScratchCardState();
 }
 
-// Scratch haptic presets — velocity-mapped string presets.
-// Using string presets ensures the proven code path through
-// _normalizeInput (avoids potential `is HapticPreset` issues on web).
-// Ordered from lightest to heaviest for velocity-based selection.
-const _scratchPresets = ['selection', 'light', 'soft', 'medium', 'heavy'];
+// Scratch haptic presets — velocity-mapped, lightest to heaviest.
+// 'selection' and 'light' are too weak to feel during active touch,
+// so the baseline is 'medium' (25ms, 0.7 intensity).
+const _scratchPresets = ['medium', 'soft', 'heavy'];
 
 class _ScratchCardState extends State<ScratchCard>
     with SingleTickerProviderStateMixin {
@@ -336,9 +335,9 @@ class _ScratchCardState extends State<ScratchCard>
       final speed = _currentPath.length >= 2
           ? (local - _currentPath[_currentPath.length - 2]).distance
           : 0.0;
-      // Map speed to a preset index: slow → 'selection', fast → 'heavy'
+      // Map speed to a preset index: slow → 'medium', fast → 'heavy'
       final idx =
-          (speed / 10).clamp(0, _scratchPresets.length - 1).floor();
+          (speed / 8).clamp(0, _scratchPresets.length - 1).floor();
       final preset = _scratchPresets[idx];
       debugPrint(
           '[haptic] scratch MOVE #${_currentPath.length} → $preset (speed=${speed.toStringAsFixed(1)})');
