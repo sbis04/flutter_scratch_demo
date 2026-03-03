@@ -1,4 +1,3 @@
-import 'dart:js_interop';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -6,28 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:web_haptics/web_haptics.dart';
 
 import 'web_audio_player.dart';
-
-// Direct navigator.vibrate() — bypasses web_haptics for diagnostics.
-@JS('navigator.vibrate')
-external bool? _jsVibrate(JSAny pattern);
-
-bool _tryVibrate(int durationMs) {
-  try {
-    final result = _jsVibrate(durationMs.toJS);
-    return result == true;
-  } catch (_) {
-    return false;
-  }
-}
-
-bool _tryVibrateCancel() {
-  try {
-    _jsVibrate(0.toJS);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
 
 const _appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
 
@@ -337,9 +314,8 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    // Haptic on initial contact (Android: direct vibrate, iOS: web_haptics).
-    _tryVibrate(200);
-    widget.haptics.trigger('medium');
+    // Start continuous scratch haptic — 'buzz' gives 1s of vibration.
+    widget.haptics.trigger('buzz');
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -355,10 +331,6 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     if (!wasPlaying && !widget.isMuted) widget.audio.play();
-    // Scratch haptic on every 3rd move via direct navigator.vibrate().
-    if (_currentPath.length % 3 == 0) {
-      _tryVibrate(30);
-    }
   }
 
   void _onPointerUp(PointerUpEvent event) {
@@ -374,7 +346,7 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
-    _tryVibrateCancel();
+    widget.haptics.cancel();
     _checkReveal();
   }
 
@@ -408,10 +380,8 @@ class _ScratchCardState extends State<ScratchCard>
       widget.audio.stop();
       _revealController.forward();
       // Celebratory reveal
-      _tryVibrate(100);
       widget.haptics.trigger('success');
       Future.delayed(const Duration(milliseconds: 300), () {
-        _tryVibrate(50);
         widget.haptics.trigger('heavy');
       });
     }
