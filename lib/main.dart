@@ -248,15 +248,6 @@ class ScratchCard extends StatefulWidget {
   State<ScratchCard> createState() => _ScratchCardState();
 }
 
-// Long scratch haptic pattern (~30 seconds of textured vibration pulses).
-// Triggered on pointer DOWN (user-gesture context) so the iOS Taptic
-// Engine checkbox trick can fire. pointermove is NOT a user-activation
-// event, so calling trigger() from there silently fails on iOS Safari.
-// Pattern varies on/off durations for an organic scratch texture.
-final _scratchPattern = List<int>.generate(1600, (i) {
-  if (i.isEven) return 20 + (i ~/ 2 % 3) * 5; // on: 20, 25, 30ms
-  return 10 + (i ~/ 2 % 2) * 5; // off: 10, 15ms
-});
 
 class _ScratchCardState extends State<ScratchCard>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
@@ -319,11 +310,10 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    // Start long scratch haptic pattern from pointer down (user-gesture
-    // context) so iOS Taptic Engine fires. pointermove is NOT a user
-    // activation event and trigger() calls from there silently fail.
-    debugPrint('[haptic] pointer DOWN → scratch pattern (${_scratchPattern.length ~/ 2} cycles)');
-    widget.haptics.trigger(_scratchPattern, const TriggerOptions(intensity: 1.0));
+    // Use 'buzz' (1000ms, intensity 1) — a confirmed-working string
+    // preset — from pointer down which is a user-gesture context.
+    debugPrint('[haptic] pointer DOWN → buzz');
+    widget.haptics.trigger('buzz');
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -356,10 +346,11 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
-    debugPrint('[haptic] pointer UP — cancelling scratch pattern');
+    debugPrint('[haptic] pointer UP — cancelling scratch haptic');
     widget.haptics.cancel();
-    // Brief delay so cancel fully completes before reveal haptics fire.
-    Future.delayed(const Duration(milliseconds: 50), _checkReveal);
+    // Call synchronously — must stay inside the pointer-up user-gesture
+    // context, otherwise iOS drops the reveal haptics.
+    _checkReveal();
   }
 
   void _updateTilt(Offset local) {
