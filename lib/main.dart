@@ -247,17 +247,11 @@ class ScratchCard extends StatefulWidget {
   State<ScratchCard> createState() => _ScratchCardState();
 }
 
-// Custom scratch haptic patterns — single-phase bursts that simulate
-// the feel of a coin scratching a card surface.
-// Kept as single vibrations with high intensity to avoid PWM-modulated
-// sub-pulses too short for hardware actuators.
-const _scratchPatterns = [
-  HapticPreset(pattern: [Vibration(duration: 10, intensity: 1.0)]),
-  HapticPreset(pattern: [Vibration(duration: 15, intensity: 0.8)]),
-  HapticPreset(pattern: [Vibration(duration: 8, intensity: 1.0)]),
-  HapticPreset(pattern: [Vibration(duration: 20, intensity: 0.7)]),
-  HapticPreset(pattern: [Vibration(duration: 12, intensity: 0.9)]),
-];
+// Scratch haptic presets — velocity-mapped string presets.
+// Using string presets ensures the proven code path through
+// _normalizeInput (avoids potential `is HapticPreset` issues on web).
+// Ordered from lightest to heaviest for velocity-based selection.
+const _scratchPresets = ['selection', 'light', 'soft', 'medium', 'heavy'];
 
 class _ScratchCardState extends State<ScratchCard>
     with SingleTickerProviderStateMixin {
@@ -278,7 +272,6 @@ class _ScratchCardState extends State<ScratchCard>
   static const double _scratchRadius = 28;
 
   final GlobalKey _cardKey = GlobalKey();
-  int _scratchHapticIndex = 0;
 
   late final AnimationController _revealController;
   late final Animation<double> _revealAnimation;
@@ -319,9 +312,7 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(true);
     // Initial contact — crisp tap
-    widget.haptics.trigger(
-      const HapticPreset(pattern: [Vibration(duration: 25, intensity: 1.0)]),
-    );
+    widget.haptics.trigger('medium');
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -338,17 +329,15 @@ class _ScratchCardState extends State<ScratchCard>
     });
     if (!wasPlaying && !widget.isMuted) widget.audio.play();
 
-    // Scratch haptics — cycle patterns with velocity-based intensity
-    if (_currentPath.length % 3 == 0) {
-      // Compute speed from recent pointer movement
+    // Scratch haptics — pick preset based on pointer speed
+    if (_currentPath.length % 2 == 0) {
       final speed = _currentPath.length >= 2
           ? (local - _currentPath[_currentPath.length - 2]).distance
           : 0.0;
-      // Map speed to intensity: slow scratch = lighter, fast = heavier
-      final intensity = (speed / 20).clamp(0.3, 1.0);
-      final pattern = _scratchPatterns[
-          _scratchHapticIndex++ % _scratchPatterns.length];
-      widget.haptics.trigger(pattern, TriggerOptions(intensity: intensity));
+      // Map speed to a preset index: slow → 'selection', fast → 'heavy'
+      final idx =
+          (speed / 10).clamp(0, _scratchPresets.length - 1).floor();
+      widget.haptics.trigger(_scratchPresets[idx]);
     }
   }
 
