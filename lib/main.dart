@@ -248,10 +248,15 @@ class ScratchCard extends StatefulWidget {
   State<ScratchCard> createState() => _ScratchCardState();
 }
 
-// Scratch haptic presets — velocity-mapped, lightest to heaviest.
-// 'selection' and 'light' are too weak to feel during active touch,
-// so the baseline is 'medium' (25ms, 0.7 intensity).
-const _scratchPresets = ['medium', 'soft', 'heavy'];
+// Long scratch haptic pattern (~30 seconds of textured vibration pulses).
+// Triggered on pointer DOWN (user-gesture context) so the iOS Taptic
+// Engine checkbox trick can fire. pointermove is NOT a user-activation
+// event, so calling trigger() from there silently fails on iOS Safari.
+// Pattern varies on/off durations for an organic scratch texture.
+final _scratchPattern = List<int>.generate(1600, (i) {
+  if (i.isEven) return 20 + (i ~/ 2 % 3) * 5; // on: 20, 25, 30ms
+  return 10 + (i ~/ 2 % 2) * 5; // off: 10, 15ms
+});
 
 class _ScratchCardState extends State<ScratchCard>
     with SingleTickerProviderStateMixin {
@@ -311,9 +316,11 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    // Initial contact — crisp tap
-    debugPrint('[haptic] pointer DOWN → medium');
-    widget.haptics.trigger('medium');
+    // Start long scratch haptic pattern from pointer down (user-gesture
+    // context) so iOS Taptic Engine fires. pointermove is NOT a user
+    // activation event and trigger() calls from there silently fail.
+    debugPrint('[haptic] pointer DOWN → scratch pattern (${_scratchPattern.length ~/ 2} cycles)');
+    widget.haptics.trigger(_scratchPattern, const TriggerOptions(intensity: 1.0));
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -329,20 +336,8 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     if (!wasPlaying && !widget.isMuted) widget.audio.play();
-
-    // Scratch haptics — pick preset based on pointer speed
-    if (_currentPath.length % 2 == 0) {
-      final speed = _currentPath.length >= 2
-          ? (local - _currentPath[_currentPath.length - 2]).distance
-          : 0.0;
-      // Map speed to a preset index: slow → 'medium', fast → 'heavy'
-      final idx =
-          (speed / 8).clamp(0, _scratchPresets.length - 1).floor();
-      final preset = _scratchPresets[idx];
-      debugPrint(
-          '[haptic] scratch MOVE #${_currentPath.length} → $preset (speed=${speed.toStringAsFixed(1)})');
-      widget.haptics.trigger(preset);
-    }
+    // Haptics: pattern already running from pointer down — no trigger
+    // here since pointermove lacks user-gesture context on iOS Safari.
   }
 
   void _onPointerUp(PointerUpEvent event) {
@@ -358,9 +353,10 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
-    debugPrint('[haptic] pointer UP — cancelling any running pattern');
+    debugPrint('[haptic] pointer UP — cancelling scratch pattern');
     widget.haptics.cancel();
-    _checkReveal();
+    // Brief delay so cancel fully completes before reveal haptics fire.
+    Future.delayed(const Duration(milliseconds: 50), _checkReveal);
   }
 
   void _updateTilt(Offset local) {
