@@ -53,7 +53,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
     super.initState();
     _pageController = PageController(viewportFraction: 0.85);
     _haptics = WebHaptics();
-    _scratchAudio = WebAudioPlayer()..load('scratch.mp3');
+    _scratchAudio = WebAudioPlayer()..load('assets/scratch.mp3');
   }
 
   @override
