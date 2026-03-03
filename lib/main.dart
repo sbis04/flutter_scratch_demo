@@ -65,6 +65,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
 
   void _goToPage(int page) {
     if (page < 0 || page >= _cardColors.length) return;
+    debugPrint('[haptic] NAV → rigid (page $page)');
     _haptics.trigger('rigid');
     _pageController.animateToPage(
       page,
@@ -312,6 +313,7 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(true);
     // Initial contact — crisp tap
+    debugPrint('[haptic] pointer DOWN → medium');
     widget.haptics.trigger('medium');
   }
 
@@ -337,7 +339,10 @@ class _ScratchCardState extends State<ScratchCard>
       // Map speed to a preset index: slow → 'selection', fast → 'heavy'
       final idx =
           (speed / 10).clamp(0, _scratchPresets.length - 1).floor();
-      widget.haptics.trigger(_scratchPresets[idx]);
+      final preset = _scratchPresets[idx];
+      debugPrint(
+          '[haptic] scratch MOVE #${_currentPath.length} → $preset (speed=${speed.toStringAsFixed(1)})');
+      widget.haptics.trigger(preset);
     }
   }
 
@@ -354,6 +359,8 @@ class _ScratchCardState extends State<ScratchCard>
     });
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
+    debugPrint('[haptic] pointer UP — cancelling any running pattern');
+    widget.haptics.cancel();
     _checkReveal();
   }
 
@@ -387,11 +394,15 @@ class _ScratchCardState extends State<ScratchCard>
       widget.audio.stop();
       _revealController.forward();
       // Celebratory reveal — ascending double-tap
+      debugPrint('[haptic] REVEAL → success (pct=${pct.toStringAsFixed(2)})');
       widget.haptics.trigger('success');
       // Follow up with a heavier thud after a beat
       Future.delayed(
         const Duration(milliseconds: 200),
-        () => widget.haptics.trigger('heavy'),
+        () {
+          debugPrint('[haptic] REVEAL delayed → heavy');
+          widget.haptics.trigger('heavy');
+        },
       );
     }
   }
@@ -408,6 +419,7 @@ class _ScratchCardState extends State<ScratchCard>
       _rotateX = 0;
       _rotateY = 0;
     });
+    debugPrint('[haptic] RESET → soft');
     widget.haptics.trigger('soft');
   }
 
