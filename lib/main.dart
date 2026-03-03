@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Scratch Card',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(useMaterial3: true),
+      theme: ThemeData.light(useMaterial3: true),
       home: const ScratchCardPage(),
     );
   }
@@ -76,7 +76,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121218),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -98,7 +98,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                     ),
                     style: IconButton.styleFrom(
                       foregroundColor:
-                          Colors.white.withValues(alpha: 0.5),
+                          Colors.black.withValues(alpha: 0.45),
                       fixedSize: const Size(40, 40),
                     ),
                   ),
@@ -107,7 +107,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                         setState(() => _resetGeneration++),
                     style: TextButton.styleFrom(
                       foregroundColor:
-                          Colors.white.withValues(alpha: 0.5),
+                          Colors.black.withValues(alpha: 0.45),
                       textStyle: const TextStyle(
                         fontSize: 12,
                         letterSpacing: 1,
@@ -185,7 +185,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
               borderRadius: BorderRadius.circular(2),
               color: isActive
                   ? _cardColors[i]
-                  : Colors.white.withValues(alpha: 0.15),
+                  : Colors.black.withValues(alpha: 0.1),
               boxShadow: isActive
                   ? [
                       BoxShadow(
@@ -211,10 +211,10 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
         icon: Icon(icon),
         iconSize: 24,
         style: IconButton.styleFrom(
-          backgroundColor: Colors.white.withValues(
-            alpha: enabled ? 0.08 : 0.03,
+          backgroundColor: Colors.black.withValues(
+            alpha: enabled ? 0.06 : 0.02,
           ),
-          foregroundColor: Colors.white.withValues(alpha: enabled ? 0.6 : 0.15),
+          foregroundColor: Colors.black.withValues(alpha: enabled ? 0.5 : 0.15),
           shape: const CircleBorder(),
           fixedSize: const Size(40, 40),
         ),
@@ -247,32 +247,16 @@ class ScratchCard extends StatefulWidget {
   State<ScratchCard> createState() => _ScratchCardState();
 }
 
-// Custom scratch haptic patterns — short textured bursts that simulate
+// Custom scratch haptic patterns — single-phase bursts that simulate
 // the feel of a coin scratching a card surface.
-final _scratchPatterns = [
-  // Quick rough texture
-  HapticPreset(pattern: [
-    Vibration(duration: 12, intensity: 0.7),
-    Vibration(delay: 6, duration: 8, intensity: 0.3),
-    Vibration(delay: 6, duration: 10, intensity: 0.6),
-  ]),
-  // Gritty scrape
-  HapticPreset(pattern: [
-    Vibration(duration: 8, intensity: 0.5),
-    Vibration(delay: 4, duration: 15, intensity: 0.8),
-    Vibration(delay: 4, duration: 6, intensity: 0.3),
-  ]),
-  // Staccato scratch
-  HapticPreset(pattern: [
-    Vibration(duration: 6, intensity: 0.9),
-    Vibration(delay: 8, duration: 6, intensity: 0.4),
-    Vibration(delay: 8, duration: 6, intensity: 0.7),
-  ]),
-  // Heavy dig
-  HapticPreset(pattern: [
-    Vibration(duration: 18, intensity: 0.9),
-    Vibration(delay: 5, duration: 10, intensity: 0.5),
-  ]),
+// Kept as single vibrations with high intensity to avoid PWM-modulated
+// sub-pulses too short for hardware actuators.
+const _scratchPatterns = [
+  HapticPreset(pattern: [Vibration(duration: 10, intensity: 1.0)]),
+  HapticPreset(pattern: [Vibration(duration: 15, intensity: 0.8)]),
+  HapticPreset(pattern: [Vibration(duration: 8, intensity: 1.0)]),
+  HapticPreset(pattern: [Vibration(duration: 20, intensity: 0.7)]),
+  HapticPreset(pattern: [Vibration(duration: 12, intensity: 0.9)]),
 ];
 
 class _ScratchCardState extends State<ScratchCard>
@@ -336,7 +320,7 @@ class _ScratchCardState extends State<ScratchCard>
     widget.onScratchActiveChanged(true);
     // Initial contact — crisp tap
     widget.haptics.trigger(
-      HapticPreset(pattern: [Vibration(duration: 15, intensity: 1.0)]),
+      const HapticPreset(pattern: [Vibration(duration: 25, intensity: 1.0)]),
     );
   }
 
@@ -469,7 +453,7 @@ class _ScratchCardState extends State<ScratchCard>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: (_isRevealed ? widget.color : Colors.white)
+                      color: (_isRevealed ? widget.color : Colors.black)
                           .withValues(alpha: 0.12),
                       blurRadius: 40,
                       spreadRadius: 2,
@@ -505,7 +489,7 @@ class _ScratchCardState extends State<ScratchCard>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   width: 2,
                                 ),
                               ),
@@ -560,7 +544,7 @@ class _ScratchCardState extends State<ScratchCard>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(30),
           ),
           child: Row(
@@ -568,14 +552,14 @@ class _ScratchCardState extends State<ScratchCard>
             children: [
               Icon(
                 Icons.card_giftcard,
-                color: Colors.white.withValues(alpha: 0.6),
+                color: Colors.black.withValues(alpha: 0.5),
                 size: 16,
               ),
               const SizedBox(width: 8),
               Text(
                 'SCRATCH AGAIN',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: Colors.black.withValues(alpha: 0.5),
                   fontSize: 13,
                   letterSpacing: 3,
                 ),
@@ -590,7 +574,7 @@ class _ScratchCardState extends State<ScratchCard>
       child: Text(
         'SCRATCH TO REVEAL',
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.4),
+          color: Colors.black.withValues(alpha: 0.35),
           fontSize: 13,
           letterSpacing: 3,
         ),
