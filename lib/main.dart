@@ -314,8 +314,6 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    // Start continuous scratch haptic — 'buzz' gives 1s of vibration.
-    widget.haptics.trigger('buzz');
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -347,6 +345,7 @@ class _ScratchCardState extends State<ScratchCard>
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
     widget.haptics.cancel();
+    widget.haptics.trigger('buzz');
     _checkReveal();
   }
 
