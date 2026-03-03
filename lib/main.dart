@@ -90,7 +90,6 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
 
   void _goToPage(int page) {
     if (page < 0 || page >= _cardColors.length) return;
-    debugPrint('[haptic] NAV → rigid (page $page)');
     _haptics.trigger('rigid');
     _pageController.animateToPage(
       page,
@@ -338,11 +337,9 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    // Direct navigator.vibrate() call — bypasses web_haptics entirely.
-    final vibrateOk = _tryVibrate(200);
-    debugPrint('[haptic] pointer DOWN → direct vibrate(200) = $vibrateOk');
-    // Also fire via web_haptics for the iOS checkbox path.
-    widget.haptics.trigger('buzz');
+    // Haptic on initial contact (Android: direct vibrate, iOS: web_haptics).
+    _tryVibrate(200);
+    widget.haptics.trigger('medium');
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -358,10 +355,9 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     if (!wasPlaying && !widget.isMuted) widget.audio.play();
-    // Try direct vibrate on every 3rd move for diagnostics.
+    // Scratch haptic on every 3rd move via direct navigator.vibrate().
     if (_currentPath.length % 3 == 0) {
-      final ok = _tryVibrate(30);
-      debugPrint('[haptic] scratch MOVE #${_currentPath.length} → direct vibrate(30) = $ok');
+      _tryVibrate(30);
     }
   }
 
@@ -379,7 +375,6 @@ class _ScratchCardState extends State<ScratchCard>
     widget.onScratchActiveChanged(false);
     widget.audio.stop();
     _tryVibrateCancel();
-    debugPrint('[haptic] pointer UP — vibrate cancelled');
     _checkReveal();
   }
 
@@ -413,12 +408,10 @@ class _ScratchCardState extends State<ScratchCard>
       widget.audio.stop();
       _revealController.forward();
       // Celebratory reveal
-      final revealOk = _tryVibrate(100);
-      debugPrint('[haptic] REVEAL → direct vibrate(100) = $revealOk');
+      _tryVibrate(100);
       widget.haptics.trigger('success');
       Future.delayed(const Duration(milliseconds: 300), () {
-        final heavyOk = _tryVibrate(50);
-        debugPrint('[haptic] REVEAL delayed → direct vibrate(50) = $heavyOk');
+        _tryVibrate(50);
         widget.haptics.trigger('heavy');
       });
     }
@@ -436,7 +429,6 @@ class _ScratchCardState extends State<ScratchCard>
       _rotateX = 0;
       _rotateY = 0;
     });
-    debugPrint('[haptic] RESET → soft');
     widget.haptics.trigger('soft');
   }
 
