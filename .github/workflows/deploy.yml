@@ -29,7 +29,15 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build web --release --base-href "/flutter_scratch_demo/"
+      - name: Read version and build with run number
+        run: |
+          BASE_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          APP_VERSION="${BASE_VERSION}+${{ github.run_number }}"
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          flutter build web --release --base-href "/flutter_scratch_demo/" --dart-define=APP_VERSION=$APP_VERSION
+
+      - name: Cache-bust flutter_bootstrap.js
+        run: sed -i "s|flutter_bootstrap.js|flutter_bootstrap.js?v=$(date +%s)|" build/web/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

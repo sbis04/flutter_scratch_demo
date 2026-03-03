@@ -6,6 +6,8 @@ import 'package:web_haptics/web_haptics.dart';
 
 import 'web_audio_player.dart';
 
+const _appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
+
 void main() {
   runApp(const MyApp());
 }
@@ -94,21 +96,16 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                 children: [
                   IconButton(
                     onPressed: () => setState(() => _isMuted = !_isMuted),
-                    icon: Icon(
-                      _isMuted ? Icons.volume_off : Icons.volume_up,
-                    ),
+                    icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up),
                     style: IconButton.styleFrom(
-                      foregroundColor:
-                          Colors.black.withValues(alpha: 0.45),
+                      foregroundColor: Colors.black.withValues(alpha: 0.45),
                       fixedSize: const Size(40, 40),
                     ),
                   ),
                   TextButton(
-                    onPressed: () =>
-                        setState(() => _resetGeneration++),
+                    onPressed: () => setState(() => _resetGeneration++),
                     style: TextButton.styleFrom(
-                      foregroundColor:
-                          Colors.black.withValues(alpha: 0.45),
+                      foregroundColor: Colors.black.withValues(alpha: 0.45),
                       textStyle: const TextStyle(
                         fontSize: 12,
                         letterSpacing: 1,
@@ -166,7 +163,16 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            Text(
+              'v$_appVersion',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.black.withValues(alpha: 0.25),
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -247,7 +253,6 @@ class ScratchCard extends StatefulWidget {
   @override
   State<ScratchCard> createState() => _ScratchCardState();
 }
-
 
 class _ScratchCardState extends State<ScratchCard>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
@@ -386,13 +391,10 @@ class _ScratchCardState extends State<ScratchCard>
       debugPrint('[haptic] REVEAL → success (pct=${pct.toStringAsFixed(2)})');
       widget.haptics.trigger('success');
       // Follow up with a heavier thud after a beat
-      Future.delayed(
-        const Duration(milliseconds: 200),
-        () {
-          debugPrint('[haptic] REVEAL delayed → heavy');
-          widget.haptics.trigger('heavy');
-        },
-      );
+      Future.delayed(const Duration(milliseconds: 200), () {
+        debugPrint('[haptic] REVEAL delayed → heavy');
+        widget.haptics.trigger('heavy');
+      });
     }
   }
 
