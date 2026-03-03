@@ -44,7 +44,6 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
   late final WebHaptics _haptics;
   late final WebAudioPlayer _scratchAudio;
   int _currentPage = 0;
-  bool _isScratchActive = false;
   int _resetGeneration = 0;
   bool _isMuted = false;
 
@@ -66,6 +65,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
 
   void _goToPage(int page) {
     if (page < 0 || page >= _cardColors.length) return;
+    _haptics.trigger('rigid');
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 300),
@@ -135,8 +135,7 @@ class _ScratchCardPageState extends State<ScratchCardPage> {
                           haptics: _haptics,
                           audio: _scratchAudio,
                           isMuted: _isMuted,
-                          onScratchActiveChanged: (active) =>
-                              setState(() => _isScratchActive = active),
+                          onScratchActiveChanged: (_) {},
                         ),
                       );
                     },
@@ -248,6 +247,34 @@ class ScratchCard extends StatefulWidget {
   State<ScratchCard> createState() => _ScratchCardState();
 }
 
+// Custom scratch haptic patterns — short textured bursts that simulate
+// the feel of a coin scratching a card surface.
+final _scratchPatterns = [
+  // Quick rough texture
+  HapticPreset(pattern: [
+    Vibration(duration: 12, intensity: 0.7),
+    Vibration(delay: 6, duration: 8, intensity: 0.3),
+    Vibration(delay: 6, duration: 10, intensity: 0.6),
+  ]),
+  // Gritty scrape
+  HapticPreset(pattern: [
+    Vibration(duration: 8, intensity: 0.5),
+    Vibration(delay: 4, duration: 15, intensity: 0.8),
+    Vibration(delay: 4, duration: 6, intensity: 0.3),
+  ]),
+  // Staccato scratch
+  HapticPreset(pattern: [
+    Vibration(duration: 6, intensity: 0.9),
+    Vibration(delay: 8, duration: 6, intensity: 0.4),
+    Vibration(delay: 8, duration: 6, intensity: 0.7),
+  ]),
+  // Heavy dig
+  HapticPreset(pattern: [
+    Vibration(duration: 18, intensity: 0.9),
+    Vibration(delay: 5, duration: 10, intensity: 0.5),
+  ]),
+];
+
 class _ScratchCardState extends State<ScratchCard>
     with SingleTickerProviderStateMixin {
   final List<List<Offset>> _scratchPaths = [];
@@ -267,6 +294,7 @@ class _ScratchCardState extends State<ScratchCard>
   static const double _scratchRadius = 28;
 
   final GlobalKey _cardKey = GlobalKey();
+  int _scratchHapticIndex = 0;
 
   late final AnimationController _revealController;
   late final Animation<double> _revealAnimation;
@@ -306,7 +334,10 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     widget.onScratchActiveChanged(true);
-    widget.haptics.trigger('light');
+    // Initial contact — crisp tap
+    widget.haptics.trigger(
+      HapticPreset(pattern: [Vibration(duration: 15, intensity: 1.0)]),
+    );
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -314,7 +345,6 @@ class _ScratchCardState extends State<ScratchCard>
     final box = _cardBox;
     if (box == null) return;
     final local = box.globalToLocal(event.position);
-    // Only play sound when pointer is actually moving over unscratched area
     final wasPlaying = _currentPath.length > 1;
     setState(() {
       _currentPath.add(local);
@@ -323,8 +353,18 @@ class _ScratchCardState extends State<ScratchCard>
       _markScratched(local);
     });
     if (!wasPlaying && !widget.isMuted) widget.audio.play();
-    if (_currentPath.length % 5 == 0) {
-      widget.haptics.trigger('selection');
+
+    // Scratch haptics — cycle patterns with velocity-based intensity
+    if (_currentPath.length % 3 == 0) {
+      // Compute speed from recent pointer movement
+      final speed = _currentPath.length >= 2
+          ? (local - _currentPath[_currentPath.length - 2]).distance
+          : 0.0;
+      // Map speed to intensity: slow scratch = lighter, fast = heavier
+      final intensity = (speed / 20).clamp(0.3, 1.0);
+      final pattern = _scratchPatterns[
+          _scratchHapticIndex++ % _scratchPatterns.length];
+      widget.haptics.trigger(pattern, TriggerOptions(intensity: intensity));
     }
   }
 
@@ -373,7 +413,13 @@ class _ScratchCardState extends State<ScratchCard>
       setState(() => _isRevealed = true);
       widget.audio.stop();
       _revealController.forward();
+      // Celebratory reveal — ascending double-tap
       widget.haptics.trigger('success');
+      // Follow up with a heavier thud after a beat
+      Future.delayed(
+        const Duration(milliseconds: 200),
+        () => widget.haptics.trigger('heavy'),
+      );
     }
   }
 
@@ -389,7 +435,7 @@ class _ScratchCardState extends State<ScratchCard>
       _rotateX = 0;
       _rotateY = 0;
     });
-    widget.haptics.trigger('medium');
+    widget.haptics.trigger('soft');
   }
 
   @override
